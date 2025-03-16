@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "request": "launch",
+            "mainClass": "src/Main",
+            "projectName": "RNGProject",
+            "classPaths": ["libs/bcprov-jdk18on-1.80.jar"]
+        }
+    ],
+    "compounds": []
+}
