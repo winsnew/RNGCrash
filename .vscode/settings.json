@@ -1,0 +1,8 @@
+{
+    "java.project.referencedLibraries": [
+        "libs\\bcprov-jdk18on-1.80.jar"
+    ],
+    "java.project.sourcePaths": [
+        "src"
+    ]
+}
