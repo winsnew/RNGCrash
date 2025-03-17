@@ -9,7 +9,7 @@ public class BinMod {
         String pkbinerWithoutPrefix = pkbiner.substring(fixedPrefix.length());
         
         if (pkbinerWithoutPrefix.length() < flipCount) {
-            throw new IllegalArgumentException("Jumlah bit untuk diubah lebih besar dari panjang string tanpa prefix");
+            throw new IllegalArgumentException("Validate bit on true length");
         }
         
         char[] bitArray = pkbinerWithoutPrefix.toCharArray();

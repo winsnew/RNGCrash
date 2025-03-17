@@ -27,7 +27,6 @@ public class Secp256k1 {
  + "483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8"));
 
         public static ECPoint getPublicKey(BigInteger privateKey) {
-            // Pastikan private key dalam rentang yang valid (1 ≤ d < N)
             if (privateKey.compareTo(BigInteger.ONE) < 0 || privateKey.compareTo(N) >= 0) {
                 privateKey = privateKey.mod(N);
             }
@@ -35,7 +34,7 @@ public class Secp256k1 {
         }
     
         public static String toCompressedPublicKey(ECPoint pubKey) {
-            ECPoint normalizedPoint = pubKey.normalize(); // Pastikan dalam bentuk normal
+            ECPoint normalizedPoint = pubKey.normalize(); 
             BigInteger x = normalizedPoint.getAffineXCoord().toBigInteger();
             BigInteger y = normalizedPoint.getAffineYCoord().toBigInteger();
             return (y.testBit(0) ? "03" : "02") + x.toString(16);
