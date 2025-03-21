@@ -4,8 +4,11 @@ import java.math.BigInteger;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bouncycastle.math.ec.ECPoint;
+import org.bouncycastle.util.encoders.Hex;
 
 import ecc.Secp256k1;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 
 public class LuckRnd {
     public static void main(String[] args) {
@@ -31,6 +34,9 @@ public class LuckRnd {
 
             BigInteger range = upperBound.subtract(lowerBound);
             boolean found = false;
+            String targetPrefix = "e0b8a2";
+
+            long startTime = System.nanoTime();
 
             while (!found) {
                 BigInteger randomNumber = lowerBound.add(new BigInteger(range.bitLength(), ThreadLocalRandom.current()).mod(range));
@@ -38,12 +44,20 @@ public class LuckRnd {
                 if (randomNumber.compareTo(lowerBound) >= 0 && randomNumber.compareTo(upperBound) <= 0) {
                     ECPoint publicKey = Secp256k1.getPublicKey(randomNumber);
                     String compressedPubKey = Secp256k1.toCompressedPublicKey(publicKey);
-                    System.out.println("Found Random Number: " + randomNumber);
-                    System.out.println("CompressPubkey: " + compressedPubKey);
-                    found = true;
+                    String hashPubkey = Secp256k1.hash160(new BigInteger(compressedPubKey, 16).toByteArray());
+                    // String hashInt = Secp256k1.hash160(Hex.decode(hashPubkey));
+                    if (hashPubkey.startsWith(targetPrefix)) {
+                        long endTime = System.nanoTime();
+                        long executionTime = (endTime - startTime) / 1_000_000;
+                        System.out.println("Found: " + randomNumber);
+                        System.out.println("CompressPubkey: " + compressedPubKey);
+                        System.out.println("Hash160: " + hashPubkey);
+                        System.out.println("Time Exc: " + executionTime + " ms");
+                        found = true;
+                    }
                 }
             }
-        } catch (NumberFormatException e) {
+        } catch (NoSuchAlgorithmException e) {
             System.out.println("Invalid number format. Ensure both bounds are valid integers.");
         }
     }

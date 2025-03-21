@@ -37,7 +37,7 @@ public class Secp256k1 {
             ECPoint normalizedPoint = pubKey.normalize(); 
             BigInteger x = normalizedPoint.getAffineXCoord().toBigInteger();
             BigInteger y = normalizedPoint.getAffineYCoord().toBigInteger();
-            return (y.testBit(0) ? "03" : "02") + x.toString(16);
+            return (y.testBit(0) ? "03" : "02") + String.format("%064x", x);
         }
     
         public static String hash160(byte[] data) throws NoSuchAlgorithmException {
