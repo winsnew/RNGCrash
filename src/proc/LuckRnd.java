@@ -7,6 +7,8 @@ import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.util.encoders.Hex;
 
 import ecc.Secp256k1;
+import java.lang.management.ManagementFactory;
+import java.lang.management.OperatingSystemMXBean;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 
@@ -34,9 +36,10 @@ public class LuckRnd {
 
             BigInteger range = upperBound.subtract(lowerBound);
             boolean found = false;
-            String targetPrefix = "e0b8a2";
+            String targetPrefix = "e0b8a2b";
 
             long startTime = System.nanoTime();
+            OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
 
             while (!found) {
                 BigInteger randomNumber = lowerBound.add(new BigInteger(range.bitLength(), ThreadLocalRandom.current()).mod(range));
@@ -46,6 +49,9 @@ public class LuckRnd {
                     String compressedPubKey = Secp256k1.toCompressedPublicKey(publicKey);
                     String hashPubkey = Secp256k1.hash160(new BigInteger(compressedPubKey, 16).toByteArray());
                     // String hashInt = Secp256k1.hash160(Hex.decode(hashPubkey));
+                    double cpuLoad = osBean.getSystemLoadAverage() * 100;
+                    System.out.printf("\rCheck: %s | CPU Usage: %.2f%%", randomNumber, cpuLoad);
+
                     if (hashPubkey.startsWith(targetPrefix)) {
                         long endTime = System.nanoTime();
                         long executionTime = (endTime - startTime) / 1_000_000;
@@ -53,6 +59,7 @@ public class LuckRnd {
                         System.out.println("CompressPubkey: " + compressedPubKey);
                         System.out.println("Hash160: " + hashPubkey);
                         System.out.println("Time Exc: " + executionTime + " ms");
+                        System.out.printf("Final CPU usage: %.2f%%\n", osBean.getSystemLoadAverage() * 100);
                         found = true;
                     }
                 }
