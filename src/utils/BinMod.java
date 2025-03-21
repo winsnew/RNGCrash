@@ -1,11 +1,11 @@
-package proc;
+package utils;
 
 import java.util.HashSet;
 import java.util.Random;
 
 public class BinMod {
     public static String flipBits(String pkbiner, int flipCount) {
-        String fixedPrefix = "1111";
+        String fixedPrefix = "1100";
         String pkbinerWithoutPrefix = pkbiner.substring(fixedPrefix.length());
         
         if (pkbinerWithoutPrefix.length() < flipCount) {
