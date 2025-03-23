@@ -5,6 +5,9 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.util.encoders.Hex;
+ 
+import com.google.common.hash.BloomFilter;
+import com.google.common.hash.Funnels;
 
 import ecc.Secp256k1;
 import java.lang.management.ManagementFactory;
@@ -19,7 +22,25 @@ public class LuckRnd {
             return;
         }
 
-        String[] bounds = args[1].split(":");
+        String rangeArg = args[1];
+        int ramGB = 2;
+
+        for (int i = 2; i < args.length; i++) {
+            if (args[i].equals("-k") && i + 1 < args.length) {
+                try {
+                    ramGB = Integer.parseInt(args[i + 1]);
+                    if (ramGB < 1 || ramGB > 4) {
+                        System.out.println("Invalid RAM Value. Use -k 2 or 4");
+                        return;
+                    }
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid RAM Format.");
+                    return;
+                }
+            }
+        }
+
+        String[] bounds = rangeArg.split(":");
         if (bounds.length != 2) {
             System.out.println("Invalid range format. Use lower:upper");
             return;
@@ -36,15 +57,28 @@ public class LuckRnd {
 
             BigInteger range = upperBound.subtract(lowerBound);
             boolean found = false;
-            String targetPrefix = "e0b8a2b";
+            String targetPrefix = "e0b8a2baee1b77fc";
 
             long startTime = System.nanoTime();
             OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
+
+            int bloomSize = (ramGB == 2) ? 500_000_000 : 1_000_000_000;
+            System.out.println("Using Bloom Filter with " + ramGB + "GB RAM (" + bloomSize + " bits)");
+            
+            BloomFilter<byte[]> bloomFilter = BloomFilter.create(
+                Funnels.byteArrayFunnel(), bloomSize
+            );
 
             while (!found) {
                 BigInteger randomNumber = lowerBound.add(new BigInteger(range.bitLength(), ThreadLocalRandom.current()).mod(range));
 
                 if (randomNumber.compareTo(lowerBound) >= 0 && randomNumber.compareTo(upperBound) <= 0) {
+                    if (bloomFilter.mightContain(randomNumber.toByteArray())) {
+                        continue;
+                    }
+
+                    bloomFilter.put(randomNumber.toByteArray());
+
                     ECPoint publicKey = Secp256k1.getPublicKey(randomNumber);
                     String compressedPubKey = Secp256k1.toCompressedPublicKey(publicKey);
                     String hashPubkey = Secp256k1.hash160(new BigInteger(compressedPubKey, 16).toByteArray());

@@ -1,5 +1,6 @@
 {
     "java.project.referencedLibraries": [
+        "libs\\guava-33.4.5-jre.jar",
         "libs\\bcprov-jdk18on-1.80.jar"
     ],
     "java.project.sourcePaths": [
