@@ -1,10 +1,10 @@
 package proc;
 
 import java.math.BigInteger;
+import java.nio.file.Files;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bouncycastle.math.ec.ECPoint;
-import org.bouncycastle.util.encoders.Hex;
  
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
@@ -12,32 +12,54 @@ import com.google.common.hash.Funnels;
 import ecc.Secp256k1;
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
+import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class LuckRnd {
     public static void main(String[] args) {
-        if (args.length != 2 || !args[0].equals("-r")) {
+        if (args.length < 2) {
             System.out.println("Usage: java -cp \"libs/*;bin\" Main -m luckrnd -r lower:upper");
             return;
         }
 
-        String rangeArg = args[1];
+        String targetFile = null;
+        String targetPrefix = null;
+        String rangeArg = null;
         int ramGB = 2;
 
-        for (int i = 2; i < args.length; i++) {
-            if (args[i].equals("-k") && i + 1 < args.length) {
-                try {
-                    ramGB = Integer.parseInt(args[i + 1]);
-                    if (ramGB < 1 || ramGB > 4) {
-                        System.out.println("Invalid RAM Value. Use -k 2 or 4");
-                        return;
+        for (int i = 0; i < args.length; i++) {
+            switch (args[i]) {
+                case "-f":
+                    if (i + 1 < args.length) targetFile = args[++i];
+                    break;
+                case "-v":
+                    if (i + 1 < args.length) targetPrefix = args[++i];
+                    break;
+                case "-r":
+                    if (i + 1 < args.length) rangeArg = args[++i];
+                    break;
+                case "-k":
+                    if (i + 1 < args.length) {
+                        try {
+                            ramGB = Integer.parseInt(args[++i]);
+                            if (ramGB < 1 || ramGB > 4) {
+                                System.out.println("Invalid Ram Value. Use -k 2 or 4");
+                                return;
+                            }
+                        } catch (NumberFormatException e) {
+                            System.out.println("Invalid Ram Format");
+                            return;
+                        }
                     }
-                } catch (NumberFormatException e) {
-                    System.out.println("Invalid RAM Format.");
-                    return;
-                }
+                    break;
             }
+        }
+
+        if (rangeArg == null) {
+            System.out.println("Range params is required (-r lower:upper)");
+            return;
         }
 
         String[] bounds = rangeArg.split(":");
@@ -57,7 +79,6 @@ public class LuckRnd {
 
             BigInteger range = upperBound.subtract(lowerBound);
             boolean found = false;
-            String targetPrefix = "e0b8a2baee1b77fc";
 
             long startTime = System.nanoTime();
             OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
@@ -68,6 +89,12 @@ public class LuckRnd {
             BloomFilter<byte[]> bloomFilter = BloomFilter.create(
                 Funnels.byteArrayFunnel(), bloomSize
             );
+
+            Set<String> targetHashes = new HashSet<>();
+            if (targetFile != null) {
+                List<String> lines = Files.readAllLines(Paths.get(targetFile));
+                targetHashes.addAll(lines);
+            }
 
             while (!found) {
                 BigInteger randomNumber = lowerBound.add(new BigInteger(range.bitLength(), ThreadLocalRandom.current()).mod(range));
@@ -86,7 +113,7 @@ public class LuckRnd {
                     double cpuLoad = osBean.getSystemLoadAverage() * 100;
                     System.out.printf("\rCheck: %s | CPU Usage: %.2f%%", randomNumber, cpuLoad);
 
-                    if (hashPubkey.startsWith(targetPrefix)) {
+                    if ((targetFile != null && targetHashes.contains(hashPubkey)) || (targetPrefix != null && hashPubkey.startsWith(targetPrefix))) {
                         long endTime = System.nanoTime();
                         long executionTime = (endTime - startTime) / 1_000_000;
                         System.out.println("Found: " + randomNumber);
@@ -98,8 +125,8 @@ public class LuckRnd {
                     }
                 }
             }
-        } catch (NoSuchAlgorithmException e) {
-            System.out.println("Invalid number format. Ensure both bounds are valid integers.");
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
         }
     }
 }
