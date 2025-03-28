@@ -1,3 +1,10 @@
 -------launch procs---------
 compiler = javac -cp "libs/*" -d bin src/ecc/*.java src/proc/* src/utils/* src/Main.java 
-run = java -cp "libs/*;bin" src/Main.java
+run = java -cp "libs/*;bin" src/Main.java 
+
+Feature LuckRnd  
+-m = mode process
+-f = read file (rmd file contains) -> next update with address file scan contains
+-r = spesific range to search
+-k = ram use (bloom filter perform)
+-v = vanity search contains (vanity rmd160 / prefix)

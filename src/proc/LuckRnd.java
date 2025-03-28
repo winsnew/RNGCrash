@@ -16,6 +16,7 @@ import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.SplittableRandom;
 
 public class LuckRnd {
     public static void main(String[] args) {
@@ -81,6 +82,8 @@ public class LuckRnd {
             boolean found = false;
 
             long startTime = System.nanoTime();
+            long lastCheckTime = System.currentTimeMillis();
+            long keysChecked = 0;
             OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
 
             int bloomSize = (ramGB == 2) ? 500_000_000 : 1_000_000_000;
@@ -96,8 +99,12 @@ public class LuckRnd {
                 targetHashes.addAll(lines);
             }
 
+            // SplittableRandom random = new SplittableRandom();
+
             while (!found) {
-                BigInteger randomNumber = lowerBound.add(new BigInteger(range.bitLength(), ThreadLocalRandom.current()).mod(range));
+                BigInteger randomNumber = lowerBound.add(new BigInteger(range.bitLength(), ThreadLocalRandom.current()));
+                // BigInteger randomNumber = lowerBound.add(new BigInteger(range.bitLength(), ThreadLocalRandom.current()).mod(range));
+
 
                 if (randomNumber.compareTo(lowerBound) >= 0 && randomNumber.compareTo(upperBound) <= 0) {
                     if (bloomFilter.mightContain(randomNumber.toByteArray())) {
@@ -105,13 +112,20 @@ public class LuckRnd {
                     }
 
                     bloomFilter.put(randomNumber.toByteArray());
+                    keysChecked++;
 
                     ECPoint publicKey = Secp256k1.getPublicKey(randomNumber);
                     String compressedPubKey = Secp256k1.toCompressedPublicKey(publicKey);
                     String hashPubkey = Secp256k1.hash160(new BigInteger(compressedPubKey, 16).toByteArray());
-                    // String hashInt = Secp256k1.hash160(Hex.decode(hashPubkey));
-                    double cpuLoad = osBean.getSystemLoadAverage() * 100;
-                    System.out.printf("\rCheck: %s | CPU Usage: %.2f%%", randomNumber, cpuLoad);
+                    
+                    long currentTime = System.currentTimeMillis();
+                    if (currentTime - lastCheckTime >= 1000) {
+                        double speed = keysChecked / ((currentTime - lastCheckTime) / 1000.0);
+                        double cpuLoad = osBean.getSystemLoadAverage() * 100;
+                        System.out.printf("\rCheck: %s | CPU Usage: %.2f%% | Speed: %.2f k/s" , randomNumber, cpuLoad, speed);
+                        keysChecked = 0;
+                        lastCheckTime = currentTime;
+                    }
 
                     if ((targetFile != null && targetHashes.contains(hashPubkey)) || (targetPrefix != null && hashPubkey.startsWith(targetPrefix))) {
                         long endTime = System.nanoTime();
